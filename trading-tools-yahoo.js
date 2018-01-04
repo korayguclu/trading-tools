@@ -45,13 +45,12 @@ if(program.get_group_data){
               getSymbol(symbol,start,end).then(function(data){
                 fs.writeFile(dataFilename, data, (err) => {
                     if (err) throw err;
-
-                    console.log(symbol+' OK!');
+                    console.log(symbol+' [OK]');
                 });
                 lr.resume();
               });
             } else {
-              console.log(symbol+' ALREADY DOWNLOADED!');
+              console.log(symbol+' [EXISTING]');
             }
           });
           lr.on('end', function () {
