@@ -23,8 +23,9 @@ program.version( '0.0.1' )
 
 
 if(program.get_group_data){
-  let end = moment().unix();
-  let start = moment().subtract( 12,'month').unix();
+  let currentDate = moment();
+  let end = currentDate.unix();
+  let start = currentDate.subtract( 12,'month').unix();
 
   fs.readdir(path, function(err, items) {
       for (var i=0; i<items.length; i++) {
@@ -37,12 +38,21 @@ if(program.get_group_data){
           });
           lr.on('line', function (line) {
             if(!line) return;
-            lr.pause();
             let symbol = line.split(';')[0];
-            getSymbol(symbol,start,end).then(function(data){
-              console.log(symbol);
-              lr.resume();
-            });
+            let dataFilename = path+'../data/'+symbol+'_'+currentDate.format("YYYYMMDD")+'.csv';
+            if(!fs.existsSync(dataFilename)){
+              lr.pause();
+              getSymbol(symbol,start,end).then(function(data){
+                fs.writeFile(dataFilename, data, (err) => {
+                    if (err) throw err;
+
+                    console.log(symbol+' OK!');
+                });
+                lr.resume();
+              });
+            } else {
+              console.log(symbol+' ALREADY DOWNLOADED!');
+            }
           });
           lr.on('end', function () {
           });
