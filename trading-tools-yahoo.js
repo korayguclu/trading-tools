@@ -1,7 +1,7 @@
 #! /usr/bin/env node
 var program = require( 'commander' );
 var fs = require('fs');
-const path = './trading-tools-investing/assets';
+const path = __dirname +'/trading-tools-yahoo/assets/';
 
 // ================= parse program arguments
 
@@ -24,7 +24,7 @@ if(program.list_group_composition){
       for (var i=0; i<items.length; i++) {
         if((""+(i+1))===program.list_group_composition
           ||program.list_group_composition===items[i]){
-          let filename = __dirname +'/trading-tools-investing/assets/'+items[i];
+          let filename =  path+items[i];
           console.log((i+1)+".",filename);
           fs.readFile(filename, 'utf8', function(err, data) {
               if (err) throw err;
