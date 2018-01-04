@@ -2,14 +2,16 @@
 const program = require( 'commander' );
 const fs = require('fs');
 const axios = require('axios');
+const setCookie = require('set-cookie-parser');
 const _ = require('lodash');
 const util = require( "util" );
-const regex = /.*\"CrumbStore\":\{\"crumb\":\"([a-zA-Z0-9]+)\"\}/;
 const LineByLineReader = require('line-by-line');
+const moment = require('moment');
+
+const regex = /.*\"CrumbStore\":\{\"crumb\":\"([a-zA-Z0-9]+)\"\}/;
 const path = __dirname +'/trading-tools-yahoo/assets/';
-const setCookie = require('set-cookie-parser');
 const yahooHistory = "https://finance.yahoo.com/quote/%s/history";
-const yahooDownload = "https://query1.finance.yahoo.com/v7/finance/download/%s?period1=898639200&period2=1514588400&interval=1wk&events=history&crumb=";
+const yahooDownload = "https://query1.finance.yahoo.com/v7/finance/download/%s?period1=%s&period2=%s&interval=1wk&events=history&crumb=%s";
 
 // ================= parse program arguments
 
@@ -21,6 +23,9 @@ program.version( '0.0.1' )
 
 
 if(program.get_group_data){
+  let end = moment().unix();
+  let start = moment().subtract( 12,'month').unix();
+
   fs.readdir(path, function(err, items) {
       for (var i=0; i<items.length; i++) {
         if((""+(i+1))===program.get_group_data
@@ -34,7 +39,7 @@ if(program.get_group_data){
             if(!line) return;
             lr.pause();
             let symbol = line.split(';')[0];
-            getSymbol(symbol).then(function(data){
+            getSymbol(symbol,start,end).then(function(data){
               console.log(symbol);
               lr.resume();
             });
@@ -50,7 +55,8 @@ if(program.get_group_data){
 var crumb;
 var cookie;
 
-function getSymbol(symbol){
+function getSymbol(symbol,start,end){
+
   let daxUrl = util.format( yahooHistory,symbol );
   return axios.get(daxUrl)
   .then(function (response) {
@@ -68,18 +74,23 @@ function getSymbol(symbol){
               }
           }
       });
-      let downloadUrl = util.format( yahooDownload,symbol );
-      return axios.get(downloadUrl+crumb, {
-        headers: { Cookie: "B="+cookie.value }
-      }).then(function(data){
-        return data.data;
-      }).catch(function (error) {
-        console.log(error);
-      });
+      return getSymbolData(symbol,start,end);
   })
   .catch(function (error) {
     console.log(error);
   });
+}
+
+function getSymbolData(symbol,start,end){
+  let downloadUrl = util.format( yahooDownload,symbol,start,end,crumb );
+  return axios.get(downloadUrl , {
+    headers: { Cookie: "B="+cookie.value }
+  }).then(function(data){
+    return data.data;
+  }).catch(function (error) {
+    console.log(error);
+  });
+
 }
 
 if(program.list_groups){
@@ -97,34 +108,24 @@ if(program.list_group_composition){
           ||program.list_group_composition===items[i]){
           let filename =  path+items[i];
           let lr = new LineByLineReader(filename);
+
+          console.log("=========================== Started == ");
+          console.log(filename);
+          console.log("-------------------------------------- ");
+
           lr.on('error', function (err) {
             console.log("Error:",err);
           });
 
           lr.on('line', function (line) {
             if(!line) return;
-            let symbol = line.split(';')[0];
-            console.log(util.format( yahooHistory,symbol ))
+            console.log(line)
           });
 
           lr.on('end', function () {
-            console.log("Finished");
+            console.log("=========================== Finished == ");
           });
-          /*
-          console.log((i+1)+".",filename);
-          fs.readFile(filename, 'utf8', function(err, data) {
-              if (err) throw err;
-              console.log(data);
-              let lines = data.split('/\n\r?\n/');
-              console.log("lines",lines);
-              _.each(lines, function(line){
-                let symbol = line ;
-                console.log("YMBOL:",symbol);
-                console.log(util.format( yahooHistory,symbol ));
-              });
-          });
-          */
-        };
+         };
 
       }
   });
